@@ -1,3 +1,18 @@
-# created by virtualenv automatically
+# Игнорировать папку виртуального окружения
 venv/
-sitewomen/
+.venv/
+env/
+
+# Игнорировать кэш Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Игнорировать файлы IDE
+.vscode/
+.idea/
+
+# Игнорировать логи и временные файлы
+*.log
+*.tmp
