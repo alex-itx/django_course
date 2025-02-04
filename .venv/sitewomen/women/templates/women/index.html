@@ -4,13 +4,13 @@
          <title>{{title}}</title>
 </head>
 <body>
-<p >{{menu}}</p>
-<p >{{float}}</p>
-<p >{{lst}}</p>
+<p >{{menu|join:" | "}}</p>
+<p >{{float|divisibleby:"2"}}</p>
+<p >{{lst|length}}</p>
 <p >{{set}}</p>
 <p >{{ dict.key_1 }} {{ dict.key_2 }}</p>
 <p >{{obj.a}}</p>
-
-<h1>{{title}}</h1>
+<p >{{url}}</p>
+<h1>{{title|cut:" "|cut:"?"}}</h1>
 </body>
 </html>
