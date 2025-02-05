@@ -1,16 +1,24 @@
 <!DOCTYPE html>
 <html>
 <head>
-         <title>{{title}}</title>
+         <title>{{ title }}</title>
 </head>
 <body>
-<p >{{menu|join:" | "}}</p>
-<p >{{float|divisibleby:"2"}}</p>
-<p >{{lst|length}}</p>
-<p >{{set}}</p>
-<p >{{ dict.key_1 }} {{ dict.key_2 }}</p>
-<p >{{obj.a}}</p>
-<p >{{url}}</p>
-<h1>{{title|cut:" "|cut:"?"}}</h1>
+<p >{{ menu|join:" | " }}</p>
+<h1>{{ title }}</h1>
+
+<ul>
+         {% for p in posts %}
+         {% if p.is_published %}
+         <li>
+                   <h2>{{p.title}}</h2>
+                   <p >{{p.content}}</p>
+                   {% if not forloop.last %}
+                   <hr>
+                   {% endif %}
+         </li>
+         {% endif %}
+         {% endfor %}
+</ul>
 </body>
 </html>
