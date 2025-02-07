@@ -1285,8 +1285,19 @@ class PublishedModel(models.Manager):
 
 
 
+СВЯЗИ МЕЖДУ ТАБЛИЦАМИ
 
 
+
+УРОК 1 ТИПЫ СВЯЗЕЙ МЕЖДУ МОДЕЛЯМИ
+
+В реальной бд множество таблиц и многие из низ связанны
+В модели, поля для связи таблиц определяются следующими следующими классами
+    ForeignKey – для связей Many to One (многие к одному);
+    ManyToManyField – для связей Many to Many (многие ко многим);
+    OneToOneField – для связей One to One (один к одному). 
+Подробнее об этом в документации:
+https://docs.djangoproject.com/en/4.2/ref/models/fields/#module-django.db.models.fields.related
 
 
 
