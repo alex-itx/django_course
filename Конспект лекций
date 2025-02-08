@@ -1551,3 +1551,108 @@ Women.objects.create(title='Ариана Гранде', slug='ariana-grande', ca
 
 
 
+УРОК 6 ДОБАВЛЕНИЕ ТЕГОВ НА САЙТ
+
+В этом уроке практически нет ничего нового, мы просто модернизируем сайт по уже знакомым методам
+
+Цель урока сделать меню отображения тегов, как мы делали для меню категорий
+А потом сделать отоброжение тегов в посте, тех что с ним связанны конечно
+
+Полетели!
+Сначала прописываем маршрут для меню тегов
+    path('tag/<slug:tag_slug>/', views.show_tag_postlist, name='tag'),
+
+Создадим функцию get_absolute_url для модели тегов
+    def get_absolute_url(self):
+        return reverse('tag', kwargs={'tag_slug': self.slug})
+
+Теперь создадим и вьюшку для меню тегов, (не забываем импортировать модель):
+    def show_tag_postlist(request, tag_slug):
+        tag = get_object_or_404(TagPost, slug=tag_slug)
+        posts = tag.tags.filter(is_published=Women.Status.PUBLISHED)  # через менедже tags достаём связанные с ним опубликованные строки из таблицы women
+        data = {
+            'title': f'Тег: {tag.tag}',   # tag.tag - 1) переменная внутри функции, 2) поле tag внутри таблицы
+            'menu': menu,
+            'posts': posts,
+            'cat_selected': None,
+        }
+ 
+        return render(request, 'women/index.html', context=data)
+
+Когда мы будем сортировать посты на сайте через теги, наши категории не должны подсвечиваться, а там сейчас всегда что-светит
+Исправим это, но пока только во вюшке index, добавив добавив в пердоваемую коллекцию переменную cat_selected = 0
+    def index(request):
+        data = {
+            'title': 'Главная страница',
+            'menu': menu,
+            'posts': Women.published.all(),
+            'cat_selected': 0,
+        }
+
+    return render(request, 'women/index.html', context=data)
+
+И создадим шаблонный тег для отображения меню тегов, как делали для категорий (не забываем импортировать модель)
+Он просто передаёт все теги что у нас есть
+    @register.inclusion_tag('women/list_tags.html')
+    def show_all_tags():
+        return {"tags": TagPost.objects.all()}
+
+
+Полетели создавать html для меню тегов women/list_tags.html
+Там всё предельно просто, нужно прокрутить все теги циклом
+{% if tags %}
+    Теги:</p>
+    <ul class="tags-list">
+        {% for t in tags %}
+        <li><a href="{{t.get_absolute_url}}">{{t.tag}}</a></li>
+        {% endfor %}
+    </ul>
+{% endif %}
+
+Далее меняем базовый шаблон, добавление в сайдбара меню тегов, он будет идти после сайдбара ютуб канала
+<li>{% show_all_tags %}</li>
+Вот так будет выглядеть весь сайдбар
+<!-- Sidebar слева -->
+    <td valign="top" class="left-chapters">
+        <ul id="leftchapters">
+        {% if cat_selected == 0 %}  # Мы убрали проверку cat_selected is None чтобы не святилось когда мы в меню тегов
+            <li class="selected">Все категории</li>
+        {% else %}
+            <li><a href="{% url 'home' %}">Все категории</a></li>
+        {% endif %}
+        {% show_categories cat_selected %}
+
+        <li class="share">
+        <p>Наш канал</p>
+        <a class="share-yt" href="https://www.youtube.com/channel/UClJzWfGWuGJL2t-3dYKcHTA/playlists" target="_blank" rel="nofollow"></a>
+        </li>
+            <li>{% show_all_tags %}</li>   # вот наше меню
+    </ul>
+</td>
+<!-- Конец Sidebar'а -->
+
+Прямо под сайдбаром мы создавали на будущее блок
+    <!-- Хлебные крошки -->
+    {% block breadcrumbs %}
+    {% endblock %}
+Мы делали это как раз для того чтобы в постах отображать теги связанные с постом
+
+Меню создано, осталось только добавить отоброжение связанных тегов внутри страницы поста
+Прямо в самом начале шаблона post.html (потому-что отоброжение тегов будет вверху) допишим такой код
+{% block breadcrumbs %}
+<!-- Теги -->
+{% with post.tags.all as tags %} # тег with позволяет создавать переменные использую пайтон код
+{% if tags %}
+<ul class="tags-list">
+    <li>Теги:</li>
+    {% for t in tags %}
+    <li><a href="{{t.get_absolute_url}}">{{t.tag}}</a></li>
+    {% endfor %}
+</ul>
+{% endif %}
+{% endwith %}
+{% endblock %}
+
+
+
+

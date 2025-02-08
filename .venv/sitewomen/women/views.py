@@ -3,8 +3,7 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.urls import reverse
 from django.template.loader import render_to_string
 from django.template.defaultfilters import slugify
-
-from .models import Women, Category
+from .models import Women, Category, TagPost
 
 menu = [{'title': "О сайте", 'url_name': 'about'},
         {'title': "Добавить статью", 'url_name': 'add_page'},
@@ -14,11 +13,11 @@ menu = [{'title': "О сайте", 'url_name': 'about'},
 
 
 def index(request):
-    posts = Women.published.all()
     data = {
         'title': 'Главная страница',
         'menu': menu,
-        'posts': posts,
+        'posts': Women.published.all(),
+        'cat_selected': 0,
     }
 
     return render(request, 'women/index.html', context=data)
@@ -60,6 +59,19 @@ def show_category(request, cat_slug):
         'menu': menu,
         'posts': posts,
         'cat_selected': category.pk,
+    }
+
+    return render(request, 'women/index.html', context=data)
+
+
+def show_tag_postlist(request, tag_slug):
+    tag = get_object_or_404(TagPost, slug=tag_slug)
+    posts = tag.tags.filter(is_published=Women.Status.PUBLISHED)
+    data = {
+        'title': f'Тег: {tag.tag}',
+        'menu': menu,
+        'posts': posts,
+        'cat_selected': None,
     }
 
     return render(request, 'women/index.html', context=data)
