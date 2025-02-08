@@ -1424,5 +1424,60 @@ Category.objects.filter(posts__title__contains='ли').distinct()
 
 
 
+УРОК 4 ОТОБРОЖЕНИЕ ПОСТОВ ПО РУБРИКАМ
 
+В этом уроке нет новой информации по джанго мы просто модернизируем на проект, используя уже знакомые нам методы
+Цель урока сделать отображение постов по категориям. т.е. добавить нашу новую таблицу в маршрут категорий и поменять шаблон
 
+сначала изменим маршрут и будем делать его по слаг конвертеру:
+path('category/<slug:cat_slug>/', views.show_category, name='category'),
+
+Следом меняем вьюшку
+И не забываем импортировать модель Category
+def show_category(request, cat_slug):
+    category = get_object_or_404(Category, slug=cat_slug)   # сохраняем объект модели Category
+    posts = Women.published.filter(cat_id=category.pk)    # и объект модели Women
+    data = {
+        'title': f'Рубрика: {category.name}', меняем отображение title страницы для шаблона
+        'menu': menu,
+        'posts': posts,    
+        'cat_selected': category.pk,  # меняем id бд заглушки, на id Category 
+    }
+ 
+    return render(request, 'women/index.html', context=data)
+
+Вспоминаем что наши рубрики отображаются с помощью пользовательского шаблонного тега (то что мы делали для изменения цвета и ссылки рубрики)
+он тут если что templatetags/women_tags.py
+там мы брали данные из бд заглушки, а сейчас будем из реальной бд
+@register.inclusion_tag('women/list_categories.html')
+def show_categories(cat_selected_id=0):
+    cats = Category.objects.all()   # берем категории из бд Category 
+    return {"cats": cats, "cat_selected": cat_selected_id}
+Так как мы добавили нашу модель в этот файл, то её тоже нужно импортировать
+
+Ну и погнали менять шаблон
+урл в шаблоне брался из {% url 'category' cat.id %}
+а мы воспользуемся нормальной функцией - cat.get_absolute_url
+{% for cat in cats %}
+         {% if cat.id == cat_selected %}
+                   <li class="selected">{{cat.name}}</li>
+         {% else %}
+                   <li><a href="{{ cat.get_absolute_url }}">{{cat.name}}</a></li>
+         {% endif %}
+{% endfor %}
+
+МЫ воспользовались функцией get_absolute_url, но ещё не создали её в Category, погнали создавать!
+    def get_absolute_url(self):
+        return reverse('category', kwargs={'cat_slug': self.slug})
+
+Вот и всё!
+Но как же без дополнительных модификаций?
+
+Добавим в наши статьи вывод названия рубрики и время публикации поста:
+Бд уже подключена везде где надо, а значит правки нужны только в шаблоне
+Отображение будет чуть выше названия поста
+тоесть перед строкой <h2>{{p.title}}</h2> в нашем цикле постов нужно внутри шаблона
+            <div class="article-panel">
+            <p class="first">Категория: {{p.cat.name}}</p>
+            <p class="last">Дата: {{p.time_update|date:"d-m-Y H:i:s"}}</p>
+            </div>
