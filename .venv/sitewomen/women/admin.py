@@ -2,12 +2,31 @@ from django.contrib import admin
 from .models import Women, Category
 
 
+class MarriedFilter(admin.SimpleListFilter):
+    title = 'Статус женщин'
+    parameter_name = 'status'
+
+    def lookups(self, request, model_admin):
+        return [
+            ('married', 'Замужем'),
+            ('single', 'Не замужем'),
+        ]
+
+    def queryset(self, request, queryset):
+        if self.value() == 'married':
+            return queryset.filter(husband__isnull=False)
+        elif self.value() == 'single':
+            return queryset.filter(husband__isnull=True)
+
+
 @admin.register(Women)
 class WomenAdmin(admin.ModelAdmin):
     list_display = ('id', 'title', 'time_create', 'is_published', 'cat', 'brief_info')
     list_display_links = ('id', 'title')
     ordering = ['-time_create', 'title']
     list_editable = ('is_published', 'cat')
+    search_fields = ['title__startswith', 'cat__name']
+    list_filter = ['cat__name', 'is_published', MarriedFilter]
     list_per_page = 5
 
     actions = ['set_published', 'set_draft']
