@@ -6,6 +6,8 @@ from django.template.defaultfilters import slugify
 from .models import Women, Category, TagPost
 from .forms import AddPostForm
 
+
+
 menu = [{'title': "О сайте", 'url_name': 'about'},
         {'title': "Добавить статью", 'url_name': 'add_page'},
         {'title': "Обратная связь", 'url_name': 'contact'},
@@ -44,7 +46,12 @@ def addpage(request):
     if request.method == 'POST':
         form = AddPostForm(request.POST)
         if form.is_valid():
-            print(form.cleaned_data)
+            # print(form.cleaned_data)
+            try:
+                Women.objects.create(**form.cleaned_data)
+                return redirect('home')
+            except:
+                form.add_error(None, 'Ошибка добавления поста')
     else:
         form = AddPostForm()
     data = {
