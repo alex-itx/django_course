@@ -3,7 +3,7 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.urls import reverse
 from django.template.loader import render_to_string
 from django.template.defaultfilters import slugify
-from .models import Women, Category, TagPost
+from .models import Women, Category, TagPost, UploadFiles
 from .forms import AddPostForm, UploadFileForm
 
 def handle_uploaded_file(f):
@@ -33,7 +33,8 @@ def about(request):
     if request.method == "POST":
         form = UploadFileForm(request.POST, request.FILES)
         if form.is_valid():
-            handle_uploaded_file(form.cleaned_data['file'])
+            fp = UploadFiles(file=form.cleaned_data['file'])
+            fp.save()
     else:
         form = UploadFileForm()
 
@@ -55,7 +56,7 @@ def show_post(request, post_slug):
 
 def addpage(request):
     if request.method == 'POST':
-        form = AddPostForm(request.POST)
+        form = AddPostForm(request.POST, request.FILES)
         if form.is_valid():
             form.save()
             return redirect('home')
