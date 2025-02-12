@@ -1,4 +1,6 @@
 from django.contrib import admin
+from django.utils.safestring import mark_safe
+
 from .models import Women, Category
 
 
@@ -21,11 +23,10 @@ class MarriedFilter(admin.SimpleListFilter):
 
 @admin.register(Women)
 class WomenAdmin(admin.ModelAdmin):
-    fields = ['title', 'slug', 'content', 'cat', 'husband', 'tags']
-    # exclude = ['tags', 'is_published']
-    # readonly_fields = ['slug']
+    fields = ['title', 'slug', 'content', 'photo', 'post_photo', 'cat', 'husband', 'tags']
+    readonly_fields = ['post_photo']
     prepopulated_fields = {"slug": ("title",)}
-    list_display = ('id', 'title', 'time_create', 'is_published', 'cat', 'brief_info')
+    list_display = ('id', 'title', 'post_photo', 'time_create', 'is_published', 'cat')
     list_display_links = ('id', 'title')
     ordering = ['-time_create', 'title']
     list_editable = ('is_published', 'cat')
@@ -37,9 +38,11 @@ class WomenAdmin(admin.ModelAdmin):
 
     actions = ['set_published', 'set_draft']
 
-    @admin.display(description="Краткое описание", ordering='content')
-    def brief_info(self, women: Women):
-        return f"Описание {len(women.content)} символов."
+    @admin.display(description="Изображение")
+    def post_photo(self, women: Women):
+        if women.photo:
+            return mark_safe(f"<img src='{women.photo.url}' width=50>")
+        return "Без фото"
 
     @admin.action(description="Опубликовать выбранные записи")
     def set_published(self, request, queryset):
