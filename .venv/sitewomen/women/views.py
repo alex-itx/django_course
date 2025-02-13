@@ -5,6 +5,8 @@ from django.template.loader import render_to_string
 from django.template.defaultfilters import slugify
 from .models import Women, Category, TagPost, UploadFiles
 from .forms import AddPostForm, UploadFileForm
+from django.views import View
+from django.views.generic import TemplateView
 
 def handle_uploaded_file(f):
     with open(f"uploads/{f.name}", "wb+") as destination:
@@ -27,6 +29,24 @@ def index(request):
     }
 
     return render(request, 'women/index.html', context=data)
+
+
+class WomenHome(TemplateView):
+    template_name = 'women/index.html'
+    extra_context = {
+        'title': 'Главная страница',
+        'menu': menu,
+        'posts': Women.published.all().select_related('cat'),
+        'cat_selected': 0,
+    }
+
+    # def get_context_data(self, **kwargs):
+    #     context = super().get_context_data(**kwargs) # наследум метод у родителя
+    #     context['title'] = 'Главная страница' # определяем объект коллекции данных и передаём ему дефолтное значение
+    #     context['menu'] = menu
+    #     context['posts'] = Women.published.all().select_related('cat')
+    #     context['cat_selected'] = int(self.request.GET.get('cat_id', 0))
+    #     return context
 
 
 def about(request):
@@ -70,6 +90,21 @@ def addpage(request):
     return render(request, 'women/addpage.html', data)
 
 
+class AddPage(View):
+    def get(self, request):
+        form = AddPostForm()
+        return render(request, 'women/addpage.html', {'menu': menu, 'title': 'Добавление статьи', 'form': form})
+
+    def post(self, request):
+        form = AddPostForm(request.POST, request.FILES)
+        if form.is_valid():
+            form.save()
+            return redirect('home')
+
+        return render(request, 'women/addpage.html', {'menu': menu, 'title': 'Добавление статьи', 'form': form})
+
+
+
 def contact(request):
     return HttpResponse("Обратная связь")
 
@@ -105,4 +140,5 @@ def show_tag_postlist(request, tag_slug):
 
 def page_not_found(request, exception):
     return HttpResponseNotFound('<h1>Страница не найдена</h1>')
+
 

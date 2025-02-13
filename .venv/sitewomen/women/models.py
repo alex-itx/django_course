@@ -16,7 +16,7 @@ class Women(models.Model):
 
     title = models.CharField(max_length=255, verbose_name="Заголовок")
     slug = models.SlugField(max_length=255, db_index=True, unique=True, validators=[
-        MinLengthValidator(5),
+        MinLengthValidator(4),
         MaxLengthValidator(100),
     ])
     photo = models.ImageField(upload_to="photos/%Y/%m/%d/", default=None, blank=True, null=True, verbose_name="Фото")
