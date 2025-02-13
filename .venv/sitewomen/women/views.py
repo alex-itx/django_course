@@ -6,7 +6,7 @@ from django.template.defaultfilters import slugify
 from .models import Women, Category, TagPost, UploadFiles
 from .forms import AddPostForm, UploadFileForm
 from django.views import View
-from django.views.generic import TemplateView, ListView
+from django.views.generic import TemplateView, ListView, DetailView
 
 
 def handle_uploaded_file(f):
@@ -78,6 +78,22 @@ def show_post(request, post_slug):
     return render(request, 'women/post.html', context=data)
 
 
+class ShowPost(DetailView):
+    template_name = 'women/post.html'
+    slug_url_kwarg = 'post_slug'
+    context_object_name = 'post'
+
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['title'] = context['post']
+        context['menu'] = menu
+        return context
+
+
+    def get_object(self, queryset=None):
+        return get_object_or_404(Women.published, slug=self.kwargs[self.slug_url_kwarg])
+
 # def addpage(request):
 #     if request.method == 'POST':
 #         form = AddPostForm(request.POST, request.FILES)
@@ -145,34 +161,34 @@ class WomenCategory(ListView):
     def get_queryset(self):  # cat__slug - поле слаг в Category; self.kwargs['cat_slug'] - имя переменной - конвертора
         return Women.published.filter(cat__slug=self.kwargs['cat_slug']).select_related('cat')
 
-def show_tag_postlist(request, tag_slug):
-    tag = get_object_or_404(TagPost, slug=tag_slug)
-    posts = tag.tags.filter(is_published=Women.Status.PUBLISHED).select_related('cat')
-    data = {
-        'title': f'Тег: {tag.tag}',
-        'menu': menu,
-        'posts': posts,
-        'cat_selected': None,
-    }
-
-    return render(request, 'women/index.html', context=data)
-
-
-# class TagPostList(ListView):
-#     template_name = 'women/index.html'
-#     context_object_name = 'posts'
-#     allow_empty = False
+# def show_tag_postlist(request, tag_slug):
+#     tag = get_object_or_404(TagPost, slug=tag_slug)
+#     posts = tag.tags.filter(is_published=Women.Status.PUBLISHED).select_related('cat')
+#     data = {
+#         'title': f'Тег: {tag.tag}',
+#         'menu': menu,
+#         'posts': posts,
+#         'cat_selected': None,
+#     }
 #
-#     def get_context_data(self, *, object_list=None, **kwargs):
-#         context = super().get_context_data(**kwargs)
-#         tag = context['posts'][0].tag.tag
-#         context['title'] = 'Тег - ' + tag.name
-#         context['menu'] = menu
-#         context['cat_selected'] = None
-#         return context
-#
-#     def get_queryset(self):
-#         return Women.published.filter(tags__tag=self.kwargs['tag_slug']).select_related('cat')
+#     return render(request, 'women/index.html', context=data)
+
+
+class TagPostList(ListView):
+    template_name = 'women/index.html'
+    context_object_name = 'posts'
+    allow_empty = False
+
+    def get_context_data(self, *, object_list=None, **kwargs):
+        context = super().get_context_data(**kwargs)
+        tag = TagPost.objects.get(slug=self.kwargs['tag_slug'])
+        context['title'] = 'Тег - ' + tag.tag
+        context['menu'] = menu
+        context['cat_selected'] = None
+        return context
+
+    def get_queryset(self):
+        return Women.published.filter(tags__slug=self.kwargs['tag_slug']).select_related('cat')
 
 
 def page_not_found(request, exception):
