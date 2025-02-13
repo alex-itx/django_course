@@ -14,7 +14,7 @@ urlpatterns = [
     path('post/<slug:post_slug>/', views.ShowPost.as_view(), name='post'),
     path('category/<slug:cat_slug>/', WomenCategory.as_view(), name='category'),
     path('tag/<slug:tag_slug>/', TagPostList.as_view(), name='tag'),
-
+    path('edit/<int:pk>/', views.UpdatePage.as_view(), name='edit_page'),
 ]
 
 
