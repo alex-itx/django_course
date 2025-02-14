@@ -4180,17 +4180,143 @@ paginate_by = 3
 
 
 
+АВТОРИЗАЦИЯ И РЕГИСТРАЦИЯ
 
 
 
+УРОК 1 ВВЕДЕНИЕ В АВТОРИЗАЦИЮ ПОЛЬЗОВАТЕЛЕЙ
+
+Это по сути вводно-подготовительный урок
+Что такое авторизация я понимаю, но вот описания ей понятий
+    Authentication (аутентификация) - проверка подлинности (наличия) пользователя по введенным данным (обычно, это логин/пароль). Как правило, это ассоциация (связь) введенных данных с пользователем, сохраненным в БД.
+    Authorization (авторизация) – разрешение на доступ (непосредственно вход) к закрытой части сайта. Часто на этом этапе выполняется сохранение в сессии идентификатора пользователя, говорящий о том, что пользователь успешно прошел аутентификацию. 
+
+вся документация по авторизации джанги тоже на месте
+https://docs.djangoproject.com/en/4.2/topics/auth/default/
+
+Авторизация нужна для определения пользователей, а значит наши пользователи должны где-то хранится. конечно-же в бд
+и у нас в бд уже есть эти таблички auth_user, auth_permission, auth_group
+Они уже со всеми полями и прописанными для них типами и условиями, но конечно же их можно изменять, но это потом.
+
+Вся движуха с пользователями: модели, шаблоны, пути, формы и прочее связанное
+обычно распологается в отдельном приложении. создадим такое
+    python manage.py startapp users 
+
+Создали и поехали настраивать проект для работы с приложением setting.py:
+
+Снача регистрируем его
+INSTALLED_APPS = [
+    ...
+    "users.apps.UsersConfig",
+]
+
+Проверяем наличае модулей в MIDDLEWARE
+MIDDLEWARE = [
+    ...
+    'django.contrib.sessions.middleware.SessionMiddleware',
+    ...
+    'django.contrib.auth.middleware.AuthenticationMiddleware',
+    ...
+]
+
+Переходим в urls.py проекта и прописываем общий маршрут для всех маршрутов приложения
+    path('users/', include('users.urls', namespace="users")),
+namespace="users" - нужен чтобы когда маршрут цеплял имена из проекта, прикреплял к ним users:имя, 
+чтобы они не конфликтовали с другими приложениями
+
+Ну и всё
+
+Создадим вью заглушки для авторизации в новом приложении
+    def login_user(request):
+        return HttpResponse("login")
+     
+     
+    def logout_user(request):
+        return HttpResponse("logout")
+
+И создадим маршруты для них
+    from django.urls import path
+    from . import views
+     
+    urlpatterns = [
+        path('login/', views.login_user, name='login'),
+        path('logout/', views.logout_user, name='logout'),
+    ]
+
+И одно небольшое нововведение
+Вобщем маршруты и вьюшки не будут работать пока мы не опередлим одну переменную в urls.py
+то самое имя для маршрутов, которое сверяет наше приложени с именем в пространсте имён в маршруте
+    app_name = "users" # та самая переменная, закиним в самом начале файла urls.py
 
 
 
+УРОК 2 АВТОРИЗАЦИЯ ПОЛЬЗОВАТЕЛЕЙ. ФУНКЦИИ authenticate() И login()
 
+В этом уроке будут создаваться формы, вьюшки и шаблоны, для авторизации и выхода из аккаунта
+Но нового здесь почти ничего нет
 
+Для начала создадим форму и файл для них forms.py
+Здесь ничего нового, кроме виджета поля для ввода пароля PasswordInput, делает вводимые символы неотображаемыми
+    from django import forms
+     
+     
+    class LoginUserForm(forms.Form):
+        username = forms.CharField(label='Логин', widget=forms.TextInput(attrs={'class': 'form-input'}))
+        password = forms.CharField(label='Пароль', widget=forms.PasswordInput(attrs={'class': 'form-input'}))
 
+Теперь создаём шаблон и директорию с файлом для неё templates/users/login.html
+    {% extends 'base.html' %}
+     
+    {% block content %}
+    <h1>Авторизация</h1>
+     
+    <form method="post">
+        {% csrf_token %}
+        {{ form.as_p }}
+        <p ><button type="submit">Войти</button></p>
+    </form>
+     
+    {% endblock %}
 
+ну и вьюшку конечно-же 
+    def login_user(request):
+        form = LoginUserForm()
+        return render(request, 'users/login.html', {'form': form})
 
+страница готова но ещё не функциональна
 
+нужно прописать логику с заполненной формой и нет
+Все новшиства как раз в том что делать с заполненными данными после проверки на валидность
+Так как эта форма авторизации пользователей, необходимо сделать аутентификацию
+- т.е. проверку на совпадение логина и пароля внутри нашей бд и проверка что пользователь активен (не забанен)
+Если все проверки пройденны, авторизовать пользователя и перенаправить на другую страницу
+Для этого нам нужно сохранить данные из пост-запроса, а конкретнее нужны значение ключа username и password
+А дальше передать их функцию authenticate
+- она принимает зам запрос, и два параметра username и password, в которые мы передаём данные из запроса
+Вывод функции сохраняем в переменную
+делаем проверку, на то что пользователь есть в бд и что он является активным - методом is_active для функции authenticate
+Если да авторизуем его
+- в функцию login передаём запрос и вывод работы authenticate
+и перенаправляем
+    def login_user(request):
+        if request.method == 'POST':
+            form = LoginUserForm(request.POST)
+            if form.is_valid():
+                cd = form.cleaned_data
+                user = authenticate(request, username=cd['username'], password=cd['password'])
+                if user and user.is_active:
+                    login(request, user)
+                    return HttpResponseRedirect(reverse('home'))
+        else:
+            form = LoginUserForm()
+        return render(request, 'users/login.html', {'form': form})
 
+Теперь оформляем вью выхода
+внутри вью просто исполняем функцию выхода - logout, она принимает запрос
+и перенаправляем на страницу авторизации
+В перенаправлении мы будем использовать имя маршрута login, а такое имя у нас присутствует в приложении women
+и чтобы нас не отправило не на ту страницу, нужно явно указать из какого приложения брать маршрут
+    def logout_user(request):
+        logout(request)
+        return HttpResponseRedirect(reverse('users:login'))
 
