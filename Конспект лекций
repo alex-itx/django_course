@@ -4060,6 +4060,136 @@ python manage.py
 
 
 
+УРОК 8 ПАГИНАЦИЯ С КЛАССОМ ListView
+
+Добавляем пагинацию в классы где она нужна
+Начнём с домашней страницы
+
+Вообщем мы знаем что пагинация реализуется классом Paginator и поидеи чтобы реолизовать пагинацию, нам нужно добавить и реализовать работу класса в нашем классе
+Но на самом деле этого не требуется
+Под капотом у класаа ListView и его подклассов уже встроен пагинатор
+И чтобы его применить  достаточно в классе указать параметр paginate_by, а в него передать размер коллекции данных на странице
+paginate_by = 3
+
+И всё! реально всё. всё работает
+Ссылок на страницы только нет, но это потомучто мы в шаблоне ничего не меняли, но вручную можно переходить по страницам
+
+Работает пагинация конечно же только на главной странице, ведь мы её только там и реализовали
+Нам ещё нужно добавить в класс с категориями и тегами
+Но мы вспоминаем про миксины и добавляем этот параметр туда
+Теперь пагинация есть везде
+
+Осталось только шаблон поменять
+
+Сначала в базовом шаблоне добавим блок для пагинации в самом низу
+    {% block navigation %}
+    {% endblock %}
+
+все посты крутятся у нас в шаблоне index, а значит этот блок нужно открывать только там. 
+Переходим и добавляем его, а в него уже оформляем переход по страничкам
+Это просто цикл в котором мы гоняем коллекцию используя класс пагинатор и его методы
+    <nav class="list-pages">
+        <ul>
+            {% for p in paginator.page_range %}
+            <li class="page-num">
+                <a href="?page={{ p }}">{{ p }}</a>
+            </li>
+            {% endfor %}
+        </ul>
+    </nav>
+
+Теперь создадим условие, что если у нас всего одна страница, убрать пагинацию
+    {% if page_obj.has_other_pages %}
+    <nav class="list-pages">
+    ...
+    </nav>
+    {% endif %}
+
+Теперь сделаем так, чтобы вместо ссылки на текущую страницу, отображалась строка
+    <nav class="list-pages">
+        <ul>
+            {% for p in paginator.page_range %}
+                       {% if page_obj.number == p %}
+            <li class="page-num page-num-selected">{{ p }}</li>
+                       {% else %}
+            <li class="page-num">
+                <a href="?page={{ p }}">{{ p }}</a>
+            </li>
+                       {% endif %}
+            {% endfor %}
+        </ul>
+    </nav>
+
+Теперь сделаем так чтобы не отображать все страницы пагинации а только текущую и соседнии две
+    {% for p in paginator.page_range %}
+               {% if page_obj.number == p %}
+    <li class="page-num page-num-selected">{{ p }}</li>
+               {% elif p >= page_obj.number|add:-2 and p <= page_obj.number|add:2  %}
+    <li class="page-num">
+        <a href="?page={{ p }}">{{ p }}</a>
+    </li>
+               {% endif %}
+    {% endfor %}
+
+И добавим кнопки перехода на соседнюю страничку
+Кнопка назад (перед циклом)
+    {% if page_obj.has_previous %}
+    <li class="page-num">
+             <a href="?page={{ page_obj.previous_page_number }}">&lt;</a>
+    </li>
+    {% endif %}
+Кнопка вперед (после цикла)
+    {% if page_obj.has_next %}
+    <li class="page-num">
+             <a href="?page={{ page_obj.next_page_number }}">&gt;</a>
+    </li>
+    {% endif %}
+
+
+Вот конечный результат
+    {% block navigation %}
+    {% if page_obj.has_other_pages %}
+    <nav class="list-pages">
+        <ul>
+            {% if page_obj.has_previous %}
+            <li class="page-num">
+                <a href="?page={{ page_obj.previous_page_number }}">&lt;</a>
+            </li>
+            {% endif %}
+
+            {% for p in paginator.page_range %}
+            {% if page_obj.number == p %}
+            <li class="page-num page-num-selected">{{ p }}</li>
+            {% elif p >= page_obj.number|add:-2 and p <= page_obj.number|add:2 %}
+            <li class="page-num">
+                <a href="?page={{ p }}">{{ p }}</a>
+            </li>
+            {% endif %}
+            {% endfor %}
+
+            {% if page_obj.has_next %}
+            <li class="page-num">
+                <a href="?page={{ page_obj.next_page_number }}">&gt;</a>
+            </li>
+            {% endif %}
+
+        </ul>
+    </nav>
+    {% endif %}
+    {% endblock %}
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

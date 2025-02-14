@@ -20,13 +20,8 @@ def handle_uploaded_file(f):
 class WomenHome(DataMixin, ListView):
     template_name = 'women/index.html'
     context_object_name = 'posts'
-
-
-    def get_context_data(self, *, object_list=None, **kwargs):
-        return self.get_mixin_context(super().get_context_data(**kwargs),
-                                      title='Главная страница',
-                                      cat_selected=0,
-                                      )
+    title_page = "Главная страница"
+    cat_selected = 0
 
     def get_queryset(self):
         return Women.published.all().select_related('cat')
