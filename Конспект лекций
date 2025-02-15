@@ -4538,7 +4538,7 @@ http://127.0.0.1:8000/accounts/profile/
 
 
 
-УРОК 4 ДЕКОРАТОР login_required И КЛАСС LoginRequiredMixin
+УРОК 5 ДЕКОРАТОР login_required И КЛАСС LoginRequiredMixin
 
 Мы добавили функционал авторизации, но, как правило, это нужно чтобы предоставить какие-то возможности авторизованными пользователям
 Например открыть доступ к каким-то закрытым страницам
@@ -4604,7 +4604,7 @@ login_url = '/admin/'
 
 
 
-УРОК 5 РЕГИСТРАЦИЯ ПОЛЬЗОВАТЕЛЕЙ ЧЕРЕЗ ФУНКЦИИ ПРЕДСТАВЛЕНИЙ
+УРОК 6 РЕГИСТРАЦИЯ ПОЛЬЗОВАТЕЛЕЙ ЧЕРЕЗ ФУНКЦИИ ПРЕДСТАВЛЕНИЙ
 
 Будем создавть страницу регистрации пользователей
 
@@ -4695,13 +4695,68 @@ class RegisterUserForm(forms.ModelForm):
 
 
 
+УРОК 7 КЛАСС UserCreationForm
+
+Переделываем форму и вью регистрации на класс
+
+Форма и так определена классом, но общим ModelForm, а для формы регистрации пользователей, существует свой, специальный класс
+- UserCreationForm, от него и относледуем нашу форму
+Для этого класса необходимо определить 3 обязательных параметра - username, password1 и password2.
+Это те-же парампетры полей что и были в обычном классе, разница только в том, что поле для первого поля пароля теперь называется password1, а не password и теперь это обязательные параметры
+Остальные поля можно также потянуть из модели
+Параметр label здесь тоже есть и он такой-же
+ещё есть праметр widget в который мы также можем передать все поля как ключи коллекции и значением передать настройки виджета
+Ещё здесь не надо реализовывать проверку на одинаковость двух полей паролей, она уже есть под капотом класса
+Но проверку на уникальность мыла всё-же придётся сделать, точно таким же способом
+    class RegisterUserForm(UserCreationForm):
+        username = forms.CharField(label='Логин', widget=forms.TextInput(attrs={'class': 'form-input'}))
+        password1 = forms.CharField(label='Пароль', widget=forms.PasswordInput(attrs={'class': 'form-input'}))
+        password2 = forms.CharField(label='Повтор пароля', widget=forms.PasswordInput(attrs={'class': 'form-input'}))
+
+        class Meta:
+            model = get_user_model()
+            fields = ['username', 'email', 'first_name', 'last_name', 'password1', 'password2']
+            labels = {
+                'email': 'E-mail',
+                'first_name': 'Имя',
+                'last_name': 'Фамилия',
+            }
+            widgets = {
+                'email': forms.TextInput(attrs={'class': 'form-input'}),
+                'first_name': forms.TextInput(attrs={'class': 'form-input'}),
+                'last_name': forms.TextInput(attrs={'class': 'form-input'}),
+            }
+     
+        def clean_email(self):
+            email = self.cleaned_data['email']
+            if User.objects.filter(email=email).exists():
+                raise forms.ValidationError("Такой E-mail уже существует!")
+            return email
 
 
+Теперь для наведения красоты сделаем передачу формы в шаблон через цикл, как это делалось и в других шаблонах форм
+    <form method="post">
+        {% csrf_token %}
+        <input type="hidden" name="next" value="{{ next }}" />
+        <div class="form-error">{{ form.non_field_errors }}</div>
+        {% for f in form %}
+        <p ><label class="form-label" for="{{ f.id_for_label }}">{{f.label}}: </label>{{ f }}</p>
+        <div class="form-error">{{ f.errors }}</div>
+        {% endfor %}
+        <p ><button type="submit">Регистрация</button></p>
+    </form>
 
+Теперь переделываем вью
+К моему ОГРОМНОМУ удивлению, специальной вьюшки для формы регистрации пользователей в джанге просто нет, как и смысла в ней
+Поэтому она реализуется уже известными классом CreateView
+не забываем про обязательный параметр success_url для класса CreateView, который осуществляет переадресацию пользователя после успешной передачи формы.
+А так в ней ничего нового:
+    class RegisterUser(CreateView):
+        form_class = RegisterUserForm
+        template_name = 'users/register.html'
+        extra_context = {'title': "Регистрация"}
+        success_url = reverse_lazy('users:login')
 
-
-
-
-
-
-
+Меняем маршрут
+    path('register/', views.RegisterUser.as_view(), name='register'),
+И всё готово!
