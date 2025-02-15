@@ -21,14 +21,15 @@
                                 <li><a href="{% url m.url_name %}">{{m.title}}</a></li>
 					   {% endfor %}
                                 {% if user.is_authenticated %}
-									<form id="logoutForm" method="post" action="{% url 'users:logout' %}">
-										{% csrf_token %}
-										<li class="last">{{ user.username }} |
-											<a href="#" onclick="document.getElementById('logoutForm').submit(); return false;">Выйти
-											</a></li>
-									{% else %}
-									<li class="last"><a href="{% url 'users:login' %}">Войти</a> | <a href="#">Регистрация</a></li>
-                                {% endif %}
+									<li class="last">
+										{{ user.username }} |
+										<form action="{% url 'users:logout' %}" method="post" style="display: inline;">
+											{% csrf_token %}
+											<button type="submit" style="background: none; border: none; color: inherit; cursor: pointer; padding: 0; font: inherit;">Выйти</button>
+										</form>
+									</li>
+								{% else %}
+								<li class="last"><a href="{% url 'users:login' %}">Войти</a> | <a href="{% url 'users:register' %}">Регистрация</a></li>                                {% endif %}
                                 <div class="clear"></div>
                        </div>
     {% endblock mainmenu %}

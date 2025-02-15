@@ -4524,8 +4524,13 @@ http://127.0.0.1:8000/accounts/profile/
 было:
 <li class="last"> {{user.username}} | <a href="{% url 'users:logout' %}">Выйти</a></li>
 Стало:
-<form id="logoutForm" method="post" action="{% url 'users:logout' %}"> {% csrf_token %} <li class="last">{{ user.username }} | 
-<a href="#" onclick="document.getElementById('logoutForm').submit(); return false;">Выйти</a></li>
+    <li class="last">
+        {{ user.username }} |
+        <form action="{% url 'users:logout' %}" method="post" style="display: inline;">
+            {% csrf_token %}
+            <button type="submit" style="background: none; border: none; color: inherit; cursor: pointer; padding: 0; font: inherit;">Выйти</button>
+        </form>
+    </li>
 
 У этого класса, тоже, свой, дефолтный адрес перенаправления
 Но мы можем исправить это так-же как для класса авторизации, указав дефолтный адрес в настройках
@@ -4599,26 +4604,94 @@ login_url = '/admin/'
 
 
 
+УРОК 5 РЕГИСТРАЦИЯ ПОЛЬЗОВАТЕЛЕЙ ЧЕРЕЗ ФУНКЦИИ ПРЕДСТАВЛЕНИЙ
 
+Будем создавть страницу регистрации пользователей
 
+Сначала создадим шаблон users/register.html
+    {% extends 'base.html' %}
+     
+    {% block content %}
+    <h1>Регистрация</h1>
+     
+    <form method="post">
+        {% csrf_token %}
+    <input type="hidden" name="next" value="{{ next }}" />
+        {{ form.as_p }}
+        <p ><button type="submit">Регистрация</button></p>
+    </form>
+     
+    {% endblock %}
 
+Далее форму
+class RegisterUserForm(forms.ModelForm):
+    username = forms.CharField(label="Логин")
+    password = forms.CharField(label="Пароль", widget=forms.PasswordInput)
+    password2 = forms.CharField(label="Повтор пароля", widget=forms.PasswordInput)
+ 
+    class Meta:
+        model = get_user_model()
+        fields = ['username', 'email', 'first_name', 'last_name', 'password', 'password2']
+        labels = {
+            'email': 'E-mail',
+            'first_name': 'Имя',
+            'last_name': 'Фамилия',
+        }
 
+вью
+    def register(request):
+        form = RegisterUserForm()
+        return render(request, 'users/register.html', {'form': form})
 
+ну и маршрут
+    path('register/', views.register, name='register'),
 
+теперь подставляем маршрут в шаблоне, в главном меню, вместо заглушки
+<li class="last"><a href="{% url 'users:login' %}">Войти</a> | <a href="{% url 'users:register' %}">Регистрация</a></li>
 
+Всё отображается,  но ещё не функционирует. Пишем логику
+Сначала сделаем проверку на совпадение полей с паролями
+Обявим для этого собственный метод внутри формы регистрации
+    def clean_password2(self):
+        cd = self.cleaned_data  # берём всю коллекцию из переданных данных
+        if cd['password'] != cd['password2']:  # если пароли не совпадают
+            raise forms.ValidationError("Пароли не совпадают!")  # выдадим ошибку
+        return cd['password2'] # а если совпадают вернём пароль (разрешим его отправить)
 
+И создадим ещё одну проверерку на уникальность пароля
+    def clean_email(self):
+        email = self.cleaned_data['email']
+        if User.objects.filter(email=email).exists():  # проверяем наличае емейла в бд
+            raise forms.ValidationError("Такой E-mail уже существует!")
+        return email
 
+Теперь пишим логику для вью
+Здесь из нового только функция set_password() - она хеширует переданные данные, как правило это пароль, и возвращает обратно уже в зашифрованном виде
+    def register(request):
+        if request.method == "POST":
+            form = RegisterUserForm(request.POST)
+            if form.is_valid():
+                user = form.save(commit=False)  # создание объекта без сохранения в БД
+                user.set_password(form.cleaned_data['password'])  # шифруем пароль
+                user.save()
+                return render(request, 'users/register_done.html')
+        else:
+            form = RegisterUserForm()
+        return render(request, 'users/register.html', {'form': form})
 
-
-
-
-
-
-
-
-
-
-
+Вобщем всё!
+Но если зарегать нового пользователя, он добавиться в бд, но нас перенаправит на неизвестную страницу, а джанго поругает, за то что не может найти к ней маршрут - register_done.html
+В общем после регистрации джанго подразумевает перенести нас на страницу приветствия нового пользователя
+И эта страница ему обязательно нужна
+Конечно это можно исправить, но можно и добавить эту страницу, всё равно, это тестовое представлени регистрации
+    {% extends 'base.html' %}
+     
+    {% block content %}
+    <h1>Добро пожаловать!</h1>
+     
+    <p >Вы успешно зарегистрировались на сайте! Для входа в систему необходимо авторизоваться по этой <a href="{% url 'users:login' %}">ссылке</a>
+    </p>
+    {% endblock %}
 
 
 
