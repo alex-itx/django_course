@@ -28,8 +28,8 @@ SECRET_KEY = 'django-insecure-wqgc0movzent4hhkzgeb6f5&eqp*0d%65vvs5oalb@ou)2j9&)
 DEBUG = True
 
 ALLOWED_HOSTS = ['127.0.0.1']
+INTERNAL_IPS = ["127.0.0.1"]
 
-INTERNAL_IPS = ['127.0.0.1']
 
 # Application definition
 
@@ -42,8 +42,8 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'django_extensions',
     'women.apps.WomenConfig',
+    'users',
     "debug_toolbar",
-    "users.apps.UsersConfig",
 ]
 
 MIDDLEWARE = [
@@ -72,7 +72,7 @@ TEMPLATES = [
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
-                'users.context_processors.get_women_context'
+                'users.context_processors.get_women_context',
             ],
         },
     },
@@ -123,17 +123,15 @@ USE_I18N = True
 USE_TZ = True
 
 
-# Static files (CSS, Java Script, Images)
+# Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/4.2/howto/static-files/
 
 STATIC_URL = 'static/'
-
 STATICFILES_DIRS = [
     BASE_DIR / 'static',
 ]
 
 MEDIA_ROOT = BASE_DIR / 'media'
-
 MEDIA_URL = '/media/'
 
 # Default primary key field type
@@ -142,5 +140,5 @@ MEDIA_URL = '/media/'
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 LOGIN_REDIRECT_URL = 'home'
-
 LOGOUT_REDIRECT_URL = 'home'
+LOGIN_URL = 'users:login'

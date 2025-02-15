@@ -1,7 +1,6 @@
 from django import forms
-from .models import Category, Husband
+from .models import Category, Husband, Women
 from django.core.validators import MinLengthValidator, MaxLengthValidator, ValidationError, deconstructible
-from .models import Women
 
 
 @deconstructible
