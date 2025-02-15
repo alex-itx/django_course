@@ -4320,3 +4320,94 @@ namespace="users" - нужен чтобы когда маршрут цеплял
         logout(request)
         return HttpResponseRedirect(reverse('users:login'))
 
+
+
+УРОК 3 ШАБЛОННЫЕ КОНТЕКСТНЫЕ ПРОЦЕССОРЫ
+
+Вобщем у нас есть колеекция данных, которая всегда статично и безимзменно передаётся на страницы во вью
+Это колеекция menu с сылками на другие страницы
+Раньше мы пихали её в каждую вьюшку, потом запихнули в миксин с возможностью изменения, но нигде эти изменения не требуются
+и наша коллекция всегда передаётся в каждую страницу в одном статичном варианте
+
+Когда у нас есть такие данные мы можем ещё больше упростить их передачу на страницу
+Например воспользоваться пользовательским шаблонным тегом и напрямую передать её в базовый шаблон
+Создаём шаблонный тег
+    @register.simple_tag
+    def get_menu():
+        return menu
+Передаём в базовый шаблон
+    {% get_menu as menu %}
+Из миксина теперь можно удалить передачу menu
+
+Но, для постоянных данных передающихся на все страницы, можно воспользоваться ещё одним механизмом - контекстный процессор
+Контекстные процессоры, обеспечивают проект каким-то постоянным, незовисимым, функционалом
+все процессоры находятся в setting.py в коллекции TEMPLATES, в ключе-коллекции context_processors
+Там уже есть какие-то процессоры, например context_processors.request, который создаёт запрос реквест на страницах
+auth.context_processors.auth обеспечивает переменной user и так далее
+
+Мы можем создать свой процессор который будет передовать коллекцию menu на каждую страницу
+Для процессоров тоже нужен отдельный файл в приоложении. 
+создадим файл context_processors.py в приложении users и в нём создадим наш процессор
+Ничего сверхестественного, это просто функция, которая возвращает menu
+    from women.utils import menu
+     
+     
+    def get_women_context(request):
+        return {'mainmenu': menu}
+И всё, осталось только зарегестрировать процессор (добавить в коллекции TEMPLATES в setting.py)
+    'context_processors': [
+                'django.template.context_processors.debug',
+                'django.template.context_processors.request',
+                'django.contrib.auth.context_processors.auth',
+                'django.contrib.messages.context_processors.messages',
+                'users.context_processors.get_women_context'
+            ],
+
+Всё данные передаются, осталось только внести их в шаблон, вместо старого варианта приёма этих данных
+    {% block mainmenu %}
+                       <div class="header">
+                                <ul id="mainmenu" class="mainmenu">
+                                <li class="logo"><a href="{% url 'home' %}"><div class="logo"></div></a></li>
+    {% for m in mainmenu %}
+                                <li><a href="{% url m.url_name %}">{{m.title}}</a></li>
+    {% endfor %}
+                                <li class="last"><a href="{% url 'users:login' %}">Войти</a></li>
+                                </ul>
+                                <div class="clear"></div>
+                       </div>
+    {% endblock mainmenu %}
+
+Ну и сделаем ещё одну модификацию:
+будем отображать кнопку "Войти" и "Регистрация" если пользователь не авторизован
+А если авторизован, будем отображать его никнейм и кнопку "Выйти" вместо предидущих
+{% if user.is_authenticated %}
+<li class="last"> {{user.username}} | <a href="{% url 'users:logout' %}">Выйти</a></li>
+{% else %}
+<li class="last"><a href="{% url 'users:login' %}">Войти</a> | <a href="#">Регистрация</a></li>
+{% endif %}
+
+
+Конечный вариант блока menu
+    {% block mainmenu %}
+                       <div class="header">
+                                <ul id="mainmenu" class="mainmenu">
+                                <li class="logo"><a href="{% url 'home' %}"><div class="logo"></div></a></li>
+    {% for m in mainmenu %}
+                                <li><a href="{% url m.url_name %}">{{m.title}}</a></li>
+    {% endfor %}
+                                {% if user.is_authenticated %}
+                                <li class="last"> {{user.username}} | <a href="{% url 'users:logout' %}">Выйти</a></li>
+                                {% else %}
+                                <li class="last"><a href="{% url 'users:login' %}">Войти</a> | <a href="#">Регистрация</a></li>
+                                {% endif %}
+                                <div class="clear"></div>
+                       </div>
+    {% endblock mainmenu %}
+
+
+
+
+
+
+
+
