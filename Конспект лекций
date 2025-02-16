@@ -4760,3 +4760,287 @@ class RegisterUserForm(forms.ModelForm):
 Меняем маршрут
     path('register/', views.RegisterUser.as_view(), name='register'),
 И всё готово!
+
+
+
+УРОК 8 АВТОРИЗАЦИЯ ПО EMAIL И СТРАНИЦА ПОЛЬЗОВАТЕЛЯ
+
+Реализуем способ авторизации через email
+Джанго для автроризации использует бекенд под названием ModelBackend, в котором определена авторизация по умолчание используя логин и пароль
+Этот бекэнд можно явно указать в настройках
+    AUTHENTICATION_BACKENDS = [
+        'django.contrib.auth.backends.ModelBackend',
+    ]
+Если перейти в класс ModelBackend, то увидим что он наследуется от друго класс BaseBackend, 
+а уже в нём, можно увидеть методы, в которых определяются данные для авторизации и прописанна логика для их сравнения 
+и осуществляется возврат пользователя
+Это реализованно двуми основными методами:
+authenticate() – непосредственно аутентификация по username и password; возвращается объект пользователя, либо None, если он не был найден;
+get_user() – получение объекта пользователя по идентификатору. 
+
+Ну и конечно же мы можем прописать собственный класс в котором переопределим методы авторизации под наши нужды, сделав возможность авторизовываться по мылу
+собственный бекэнд тоже пишется в отдельном файле authentication.py
+Создаём свой класс, наследуем его от BaseBackend, нагло копируем эти два метода себе и производим необходимые изменения
+    class EmailAuthBackend(BaseBackend):
+        def authenticate(self, request, username=None, password=None, **kwargs):
+            user_model = get_user_model() # связываем с моделью
+            try:
+                user = user_model.objects.get(email=username) # логика подмены username на еmail
+                if user.check_password(password): # проверка пароля
+                    return user
+                return None
+            except (user_model.DoesNotExist, user_model.MultipleObjectsReturned):
+                return None
+
+        def get_user(self, user_id): # возврат объекта пользователя (без этого мы не авторизуемся)
+            user_model = get_user_model() # получаем объект юзера
+            try:
+                return user_model.objects.get(pk=user_id) # возвращаем объект
+            except user_model.DoesNotExist:
+                return None
+
+Наш новый бекенд добавлен, и теперь нужно зарегистрировать его
+    AUTHENTICATION_BACKENDS = [
+        'django.contrib.auth.backends.ModelBackend',
+        'users.authentication.EmailAuthBackend',
+    ]
+
+Всё работает!
+Теперь создадим страницу профиля, где пользователь сможет редактировать свои данные
+
+Сначала шаблон users/profile.html
+    {% extends 'base.html' %}
+     
+    {% block content %}
+    <h1>Профиль</h1>
+     
+    <form method="post">
+        {% csrf_token %}
+        <div class="form-error">{{ form.non_field_errors }}</div>
+        {% for f in form %}
+        <p ><label class="form-label" for="{{ f.id_for_label }}">{{f.label}}: </label>{{ f }}</p>
+        <div class="form-error">{{ f.errors }}</div>
+        {% endfor %}
+     
+        <p ><button type="submit">Сохранить</button></p>
+    </form>
+     
+    {% endblock %}
+
+Тепрь форму
+    class ProfileUserForm(forms.ModelForm):
+        username = forms.CharField(disabled=True, label='Логин', widget=forms.TextInput(attrs={'class': 'form-input'}))
+        email = forms.CharField(disabled=True, label='E-mail', widget=forms.TextInput(attrs={'class': 'form-input'}))
+     
+        class Meta:
+            model = get_user_model()
+            fields = ['username', 'email', 'first_name', 'last_name']
+            labels = {
+                'first_name': 'Имя',
+                'last_name': 'Фамилия',
+            }
+            widgets = {
+                'first_name': forms.TextInput(attrs={'class': 'form-input'}),
+                'last_name': forms.TextInput(attrs={'class': 'form-input'}),
+            }
+
+Ну и вью. На странице можно изменять данные поэтому это будет UpdateView
+    class ProfileUser(LoginRequiredMixin, UpdateView):
+        model = get_user_model()
+        form_class = ProfileUserForm
+        template_name = 'users/profile.html'
+        extra_context = {'title': "Профиль пользователя"}
+     
+        def get_success_url(self):
+            return reverse_lazy('users:profile')
+
+        def get_object(self, queryset=None): # Метод позволяет отобрать ту запись в бд которая нам нужна для редактирования
+            return self.request.user  # выбираем запись текущего пользователя
+
+Маршрут
+    path('profile/', views.ProfileUser.as_view(), name='profile'),
+
+А теперь сделаем, чтобы строка с нашим логином в сайдбаре, была ссылкой на страницу профиля
+<li class="last"> <a href="{% url 'users:profile' %}">{{user.username}}</a> | <a href="{% url 'users:logout' %}">Выйти</a></li>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
