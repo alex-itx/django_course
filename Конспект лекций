@@ -4997,34 +4997,126 @@ Message-ID: <173970304674.46430.10627492710385888628@fedora>
 
 
 
+УРОК 11 РЕАЛИЗАЦИЯ АЛГОРИТМА ВОСТАНОВЛЕНИЯ ПАРОЛЯ
 
+Создадим все шаблоны, маршруты и вью для отработки механизма востановления пароля
+Для этого воспользуемся классами для востановления пароля и сброса пароля, всё в тойже документации
+    https://docs.djangoproject.com/en/4.2/topics/email/
+Там подробно описаны и сами классы и их маршруты
 
+Сначала создадим шаблон для ввода емейл password_reset_form.html
+    {% extends 'base.html' %}
+     
+    {% block content %}
+    <h1>Восстановление пароля</h1>
+     
+    <form method="post">
+        {% csrf_token %}
+    {% for f in form %}
+    <p ><label class="form-label" for="{{ f.id_for_label }}">{{f.label}}: </label>{{ f }}</p>
+    <div class="form-error">{{ f.errors }}</div>
+    {% endfor %}
+     
+        <p ><button type="submit">Сбросить по E-mail</button></p>
+    </form>
+     
+    {% endblock %}
 
+И шаблон password_reset_done.html с информацией о сбросе пароля по E-mail (скопирован из register/password_reset_done.html и немного изменен):
+    {% extends "base.html" %}
+    {% load i18n %}
+     
+    {% block content %}
+    <h1>Сброс пароля</h1>
+    <p >{% translate 'We’ve emailed you instructions for setting your password, if an account exists with the email you entered. You should receive them shortly.' %}</p>
+    <p >{% translate 'If you don’t receive an email, please make sure you’ve entered the address you registered with, and check your spam folder.' %}</p>
+    {% endblock %}
 
+Вьюшки для шаблона будут стандартные PasswordResetView и PasswordResetDoneView
+а значит создавать их не нужно, просто закинем в маршруты
+    path('password-reset/', 
+         PasswordResetView.as_view(template_name = "users/password_reset_form.html"),
+         name='password_reset'),
+    path('password-reset/done/',
+         PasswordResetDoneView.as_view(template_name = "users/password_reset_done.html"),
+         name='password_reset_done'),
 
+На странице авторизации добавим ссылку "Забыли пароль"
+    <p ><a href="{% url 'users:password_reset' %}">Забыли пароль?</a></p>
 
+И вот у нас определена первая часть схемы, до отправки сообщения
+Ссылки на востановление уже работают и форма с емейлом тоже, но нам пока некуда переходить для ввода нового пароля, после получения письма с ссылкой на форму добавления пароля
 
+Теперь создадим страницу для формы ввода нового пароля password_reset_confirm.html
+    {% extends 'base.html' %}
+     
+    {% block content %}
+    <h1>Новый пароль</h1>
+     
+    <form method="post">
+        {% csrf_token %}
+        <div class="form-error">{{ form.non_field_errors }}</div>
+        {% for f in form %}
+        <p ><label class="form-label" for="{{ f.id_for_label }}">{{f.label}}: </label>{{ f }}</p>
+        <div class="form-error">{{ f.errors }}</div>
+        {% endfor %}
+     
+        <p ><button type="submit">Сохранить</button></p>
+    </form>
+     
+    {% endblock %}
 
+И страничку с сообщением об успешной замене password_reset_complete.html
+    {% extends 'base.html' %}
+     
+    {% block content %}
+    <h1>Пароль изменен</h1>
+     
+    <p >Поздравляем! Вы успешно изменили пароль своего аккаунта. Используйте его для
+      <a href="{% url 'users:login' %}">входа в систему</a>.</p>
+     
+    {% endblock %}
 
+Снова используем стандартные вью классы и сразу определяем маршрут
+    path('password-reset/<uidb64>/<token>/', PasswordResetConfirmView.as_view(template_name="users/password_reset_confirm.html"), name='password_reset_confirm'),
+    path('password-reset/complete/', PasswordResetCompleteView.as_view(template_name="users/password_reset_complete.html"), name='password_reset_complete'),
 
+Всё. все странички и маршруты есть, данные правильно обрабатываются, и ссылки правильно перенаправляются
+Но при попытки сбросить пароль, после ввода емейла, мы ловим ошибку
 
+Потому-что джанго под капотом ловит и обрабатывает письмо в своих собственных шаблонах registration\password_reset_email.html
+В них она использует другой маршрут, без нашего пространства имён
+Скопируем этот html себе и подправим в нём теги
+было
+{% url 'password_reset_confirm' uidb64=uid token=token %}
+стало
+{{ protocol }}://{{ domain }}{% url 'users:password_reset_confirm' uidb64=uid token=token %}
 
+Ну и добавим этот шаблон в маршрут тоже в класс вью PasswordResetView как параметр email_template_name
+И добавим в него ещё перенаправление
+    path('password-reset/',
+         PasswordResetView.as_view(
+             template_name="users/password_reset_form.html",
+             email_template_name="users/password_reset_email.html",
+             success_url=reverse_lazy("users:password_reset_done")
+         ),
+         name='password_reset'),
 
+В класс PasswordResetConfirmView тоже добавим перенеправление
+    path('password-reset/<uidb64>/<token>/',
+         PasswordResetConfirmView.as_view(
+             template_name="users/password_reset_confirm.html",
+             success_url=reverse_lazy("users:password_reset_complete")
+         ),
+         name='password_reset_confirm'),
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+Ещё раз напомню, потому-что это важно
+Мы используем стандартные классы. они работают со стандартными названиями маршруто и шаблонов
+Значит, чтобы не переопределять эти классы, необходимо называть маршруты и шаблоны именно так как они указанны в классах
+все шаблоны были скопированны из стандартных (тех, что используются классами)
+после вставленны в наше приложение и отредактированны.
+Ниже путь к этим шаблонам
+.venv/lib/python3.13/site-packages/django/contrib/admin/templates/registration
 
 
 
